@@ -3,6 +3,8 @@ import re
 import os
 import time
 import torch
+
+from jinja2 import Template
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sympy import sympify, simplify
 from sympy.core.sympify import SympifyError
@@ -11,7 +13,7 @@ from accelerate.utils import gather_object
 from tqdm import tqdm
 
 system_pe = "You are a helpful AI assistant. When presented with questions, think step by step to reach conclusions.\n{{ content }}\nYou FIRST think about the reasoning process as an internal monologue and then provide the final answer. The reasoning process MUST BE enclosed within <think> </think> tags. The final answer MUST BE put in \\boxed{}."
-
+prompt_template = Template(system_pe)
 
 def normalize_answer(ans):
     if ans is None:
@@ -80,7 +82,8 @@ def evaluate_dataset_parallel(model, tokenizer, jsonl_path, accelerator, max_new
         item = json.loads(line)
         question = item.get("question", "") or item.get("Problem", "") or item.get("problem", "")
         gold_answer = item.get("Answer", "") or item.get("answer", "")
-        questions.append(f"{system_pe}\nQuestion:\n{question}\nAnswer:")
+        prompt = prompt_template.render(content=question)
+        questions.append(prompt)
         gold_answers.append(gold_answer)
 
     # 分配到每个进程/GPU
