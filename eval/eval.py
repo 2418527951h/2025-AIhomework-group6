@@ -29,16 +29,18 @@ def normalize_answer(ans):
         return ans
 
 def extract_boxed_answer(text):
-    match = re.search(r'\\boxed\{([^{}]*)\}', text)
-    if match:
-        return match.group(1).strip()
-    match = re.search(r'\\boxed\{((?:[^{}]|(?:\{[^{}]*\}))*)\}', text)
-    if match:
-        return match.group(1).strip()
+    matches = re.findall(r'\\boxed\{([^{}]*)\}', text)
+    if matches:
+        return matches[-1].strip()
+
+    matches = re.findall(r'\\boxed\{((?:[^{}]|(?:\{[^{}]*\}))*?)\}', text)
+    if matches:
+        return matches[-1].strip()
+
     return None
 
 def extract_final_answer(output_text):
-    think_split = output_text.split('<\\think>')
+    think_split = output_text.split('</think>')
     after_think = think_split[-1] if len(think_split) > 1 else output_text
     return extract_boxed_answer(after_think)
 
