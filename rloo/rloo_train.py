@@ -169,9 +169,9 @@ def main():
     NUM_GEN = 8
     config = RLOOConfig(
         output_dir=f"./rloo_output_official_{seed}",
-        per_device_train_batch_size=16,
+        per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
-        learning_rate=1e-4,
+        learning_rate=1e-5,
         num_train_epochs=2,
         max_grad_norm=0.3,
         logging_steps=10,
