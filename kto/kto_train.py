@@ -100,7 +100,61 @@ def split_train_eval(dataset, train_size=400, eval_size=100, seed=42):
     
     return train_dataset, eval_dataset
 
+def generate_comparison_samples(dataset, reference_model, tokenizer, num_samples=100, seed=42):
+    """生成对比样本"""
+    cache_file = f"kto_cache_seed{seed}.pkl"
+    if os.path.exists(cache_file):
+        print(f"📁 从缓存加载对比样本: {cache_file}")
+        with open(cache_file, 'rb') as f:
+            cached_data = pickle.load(f)
+            return Dataset.from_list(cached_data)
     
+    print("🔄 生成对比样本...")
+    processed_data = []
+    batch_size = 4
+    num_samples = min(num_samples, len(dataset))
+    
+    for batch_start in range(0, num_samples, batch_size):
+        batch_end = min(batch_start + batch_size, num_samples)
+        batch_items = dataset[batch_start:batch_end]
+        batch_prompts = batch_items["prompt"]
+        batch_desired = batch_items["completion"]
+        
+        try:
+            batch_inputs = tokenizer(
+                [make_prompt(p) for p in batch_prompts],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=512
+            ).to(reference_model.device)
+            
+            with torch.no_grad():
+                batch_outputs = reference_model.generate(
+                    batch_inputs.input_ids,
+                    max_new_tokens=256,
+                    temperature=0.8,
+                    do_sample=True,
+                    pad_token_id=tokenizer.pad_token_id,
+                )
+            
+            for i, prompt in enumerate(batch_prompts):
+                output_ids = batch_outputs[i][len(batch_inputs.input_ids[i]):]
+                reference_completion = tokenizer.decode(output_ids, skip_special_tokens=True)
+                processed_data.extend([
+                    {"prompt": prompt, "completion": batch_desired[i], "label": True},
+                    {"prompt": prompt, "completion": reference_completion, "label": False}
+                ])
+        except Exception as e:
+            print(f"❌ 批处理出错: {e}")
+            continue
+    
+    with open(cache_file, 'wb') as f:
+        pickle.dump(processed_data, f)
+    print(f"💾 对比样本已保存到: {cache_file}")
+    
+    return Dataset.from_list(processed_data)
+      
 
     
 def make_prompt(problem):
