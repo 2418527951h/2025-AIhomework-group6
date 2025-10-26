@@ -172,7 +172,7 @@ def main():
         per_device_train_batch_size=2,
         gradient_accumulation_steps=4,
         learning_rate=1e-5,
-        num_train_epochs=2,
+        num_train_epochs=3,
         max_grad_norm=0.3,
         logging_steps=10,
         save_steps=100,
